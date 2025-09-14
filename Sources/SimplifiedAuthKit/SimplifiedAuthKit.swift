@@ -18,8 +18,6 @@ public final class SimplifiedAuthKit
    
     @MainActor public static var sharedKit: SimplifiedAuthKit?
     
-    
-    
     // MARK: - Firebase Configuration Helper 
     @MainActor private func ensureFirebaseConfigured() throws
     {
