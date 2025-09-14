@@ -74,8 +74,7 @@ public final class SimplifiedAuthKit
         
         func authorizationController(controller: ASAuthorizationController,
                                         didCompleteWithAuthorization authorization: ASAuthorization) {
-               // Tell the caller
-               completion(.success(authorization))
+             
                // 🔑 Also sign into Firebase
             print("Passing data to firebase")
             kit?.handleAppleAuthorization(authorization: authorization, overallCompletion: completion)
