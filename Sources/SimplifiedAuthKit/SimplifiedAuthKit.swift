@@ -197,7 +197,12 @@ extension SimplifiedAuthKit
              Auth.auth().signIn(with: credential) { authResult, error in
                  if let error = error {
                      SimplifiedAuthKitLogger.log(
-                         "[SimplifiedAuthKit] Login Rejected — Firebase sign-in failed: \(error.localizedDescription)",
+                         """
+                             [SimplifiedAuthKit] ❌ Login Rejected — Firebase sign-in failed.
+                             Reason: \(error.localizedDescription)
+                             Action: Ensure Apple Sign-In is enabled in your Firebase Console 
+                             (Authentication → Sign-in Method → Apple).
+                             """,
                          level: .error
                      )
                      let firebaseError = NSError(
