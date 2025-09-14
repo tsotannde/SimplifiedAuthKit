@@ -230,12 +230,16 @@ extension SimplifiedAuthKit
             Auth.auth().signIn(with: credential)
             { authResult, error in
                 if let error = error {
-                    print("Firebase sign in error: \(error.localizedDescription)")
+                    SimplifiedAuthKitLogger.log(
+                        "[SimplifiedAuthKit] Login Rejected — Firebase sign-in failed: \(error.localizedDescription)",
+                        level: .error
+                    )
                     return
                 }
-                print("✅ Signed in with Apple and Firebase: \(String(describing: authResult?.user.uid))")
-                
-                
+                SimplifiedAuthKitLogger.log(
+                    "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(String(describing: authResult?.user.uid))",
+                    level: .info
+                )
             }
         }
     }
