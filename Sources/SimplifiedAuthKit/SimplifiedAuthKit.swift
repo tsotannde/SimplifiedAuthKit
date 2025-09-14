@@ -135,22 +135,19 @@ public final class SimplifiedAuthKit
     private final class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     
         private let completion: (SimplifiedAuthKit.AppleSignInResult) -> Void
-            private weak var kit: SimplifiedAuthKit?
+        private weak var kit: SimplifiedAuthKit?
 
-            init(kit: SimplifiedAuthKit, completion: @escaping (SimplifiedAuthKit.AppleSignInResult) -> Void) 
+        init(kit: SimplifiedAuthKit, completion: @escaping (SimplifiedAuthKit.AppleSignInResult) -> Void) 
         {
-                self.kit = kit
-                self.completion = completion
-            }
+            self.kit = kit
+            self.completion = completion
+        }
         
         func authorizationController(controller: ASAuthorizationController,
-                                        didCompleteWithAuthorization authorization: ASAuthorization) {
-               // Tell the caller
-               completion(.success(authorization))
-               // 🔑 Also sign into Firebase
-            print("Passing data to firebase")
-               kit?.handleAppleAuthorization(authorization: authorization)
-           }
+                                     didCompleteWithAuthorization authorization: ASAuthorization) {
+            // It just passed Apple’s authorization back directly, without waiting for Firebase.
+            completion(.success(authorization))
+        }
         
         func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
             completion(.failure(error))
@@ -210,7 +207,11 @@ extension SimplifiedAuthKit
         return result
     }
     
-    func handleAppleAuthorization(authorization: ASAuthorization) {
+    /// Now asynchronous, for use in delegate
+    func handleAppleAuthorization(
+        authorization: ASAuthorization,
+        completion: @escaping (Result<AuthDataResult, Error>) -> Void
+    ) {
         print("Someone Called me not you!")
         if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
            let identityToken = appleIDCredential.identityToken,
@@ -218,7 +219,13 @@ extension SimplifiedAuthKit
             
             guard let nonce = currentNonce else
             {
-                fatalError("Invalid state: No login request was sent.")
+                let error = NSError(
+                    domain: "SimplifiedAuthKit",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Invalid state: No login request was sent."]
+                )
+                completion(.failure(error))
+                return
             }
             
             let credential = OAuthProvider.appleCredential(
@@ -227,20 +234,37 @@ extension SimplifiedAuthKit
                 fullName: appleIDCredential.fullName
             )
             
-            Auth.auth().signIn(with: credential)
-            { authResult, error in
+            Auth.auth().signIn(with: credential) { authResult, error in
                 if let error = error {
                     SimplifiedAuthKitLogger.log(
                         "[SimplifiedAuthKit] Login Rejected — Firebase sign-in failed: \(error.localizedDescription)",
                         level: .error
                     )
+                    completion(.failure(error))
                     return
                 }
-                SimplifiedAuthKitLogger.log(
-                    "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(String(describing: authResult?.user.uid))",
-                    level: .info
-                )
+                if let authResult = authResult {
+                    SimplifiedAuthKitLogger.log(
+                        "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(String(describing: authResult.user.uid))",
+                        level: .info
+                    )
+                    completion(.success(authResult))
+                } else {
+                    let genError = NSError(
+                        domain: "SimplifiedAuthKit",
+                        code: 3,
+                        userInfo: [NSLocalizedDescriptionKey: "Unexpected nil Firebase AuthDataResult."]
+                    )
+                    completion(.failure(genError))
+                }
             }
+        } else {
+            let error = NSError(
+                domain: "SimplifiedAuthKit",
+                code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "Unable to parse identity token from AppleID credential."]
+            )
+            completion(.failure(error))
         }
     }
     
@@ -285,10 +309,6 @@ extension SimplifiedAuthKit
 
 //
 
-
-
-
-
 extension ASAuthorizationAppleIDButton 
 {
     public func startAppleSignIn(from vc: UIViewController,
@@ -296,3 +316,4 @@ extension ASAuthorizationAppleIDButton
         SimplifiedAuthKit().startAppleSignIn(from: vc, completion: completion)
     }
 }
+
