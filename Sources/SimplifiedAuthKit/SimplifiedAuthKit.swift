@@ -21,14 +21,23 @@ public final class SimplifiedAuthKit
     
     
     // MARK: - Firebase Configuration Helper 
-    private func ensureFirebaseConfigured() {
-        if FirebaseApp.app() == nil {
+    @MainActor private func ensureFirebaseConfigured() throws
+    {
+        if FirebaseApp.app() == nil
+        {
             if let filePath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
-               let options = FirebaseOptions(contentsOfFile: filePath) {
+               
+                let options = FirebaseOptions(contentsOfFile: filePath) 
+            {
                 FirebaseApp.configure(options: options)
-                print("⚡️ [SimplifiedAuthKit] Firebase was not configured. SimplifiedAuthKit has configured it for you.\n👉 Best practice: call FirebaseApp.configure() inside AppDelegate.application(_:didFinishLaunchingWithOptions:) to customize behavior.")
+                SimplifiedAuthKitLogger.log(SimplifiedAuthKitMessages.firebaseConfigured,level: .info)
             } else {
-                print("⚠️ Warning: GoogleService-Info.plist is missing. Firebase will not be configured.")
+                SimplifiedAuthKitLogger.log(SimplifiedAuthKitMessages.firebasePlistMissing, level: .error)
+                throw NSError(
+                    domain: "SimplifiedAuthKit",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "GoogleService-Info.plist is missing."]
+                )
             }
         }
     }
@@ -239,7 +248,12 @@ extension SimplifiedAuthKit
     )
     {
         print("Latest Varson")
-        ensureFirebaseConfigured()  //Checking if Firebase is Configured
+        do {
+            try ensureFirebaseConfigured()  //Checking if Firebase is Configured
+        } catch {
+            completion(.failure(error))
+            return
+        }
         
         self.presentingViewController = presentingVC
         self.presentingWindow = presentingVC.view.window
