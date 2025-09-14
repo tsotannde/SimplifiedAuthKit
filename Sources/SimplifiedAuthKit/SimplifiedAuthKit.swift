@@ -41,84 +41,15 @@ public final class SimplifiedAuthKit
     }
     
 
-    /// Creates a fully configured **Sign in with Apple** button.
-    ///
-    /// - Automatically applies Apple’s official styling.
-    /// - Optionally wires up the tap event to start the Apple sign-in flow.
-    /// - Handles all delegate boilerplate and surfaces results via a completion handler.
-    ///
-    /// Usage:
-    /// ```swift
-    /// // Simple: just a styled button, no sign-in action
-    /// let button = SimplifiedAuthKit.makeAppleButton(from: self)
-    ///
-    /// // Full flow: styled button + sign-in with completion
-    /// let button = SimplifiedAuthKit.makeAppleButton(from: self) { result in
-    ///     switch result {
-    ///     case .success(let authorization):
-    ///         print("✅ Signed in: \(authorization)")
-    ///     case .failure(let error):
-    ///         print("❌ Error: \(error.localizedDescription)")
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// - Parameters:
-    ///   - vc: The presenting view controller for the sign-in flow.
-    ///   - completion: Optional. If provided, the button will automatically
-    ///     initiate Apple sign-in and call this handler with success or failure.
-    /// - Returns: A ready-to-use `ASAuthorizationAppleIDButton`.
-
-
-    // 1. Full version (with completion)
-
-//    public static func makeAppleButton(
-//        from vc: UIViewController,
-//        completion: ((AppleSignInResult) -> Void)? = nil
-//    ) -> ASAuthorizationAppleIDButton {
-//        let button = ASAuthorizationAppleIDButton(type: .signIn, style: .black)
-//
-//        if let completion = completion {
-//            button.addAction(UIAction { _ in
-//                SimplifiedAuthKit().startAppleSignIn(from: vc, completion: completion)
-//            }, for: .touchUpInside)
-//        }
-//
-//        return button
-//    }
-    
-//    @MainActor
-//    public static func makeAppleButton(  f
-//        from vc: UIViewController,
-//        completion: @escaping (AppleSignInSimpleResult) -> Void
-//    ) -> ASAuthorizationAppleIDButton {
-//        let button = ASAuthorizationAppleIDButton(type: .signIn, style: .black)
-//
-//        button.addAction(UIAction { _ in
-//            SimplifiedAuthKit().startAppleSignIn(from: vc) { result in
-//                switch result {
-//                case .success(let authorization):
-//                    completion(.success("✅ Signed in: \(authorization)"))
-//    
-//                case .failure(let error):
-//                    completion(.failure("❌ Sign in failed: \(error.localizedDescription)", error))
-//                }
-//            }
-//        }, for: .touchUpInside)
-//
-//        return button
-//    }
-//   
 
     
     @MainActor
-    public static func makeAppleButton(
-        from vc: UIViewController,
-        completion: ((AppleSignInResult) -> Void)? = nil
-    ) -> ASAuthorizationAppleIDButton {
+    public static func makeAppleButton(from vc: UIViewController,completion: ((AppleSignInResult) -> Void)? = nil) -> ASAuthorizationAppleIDButton 
+    {
         let button = ASAuthorizationAppleIDButton(type: .signIn, style: .black)
 
-        if let completion = completion {
+        if let completion = completion 
+        {
             button.addAction(UIAction { _ in
                 SimplifiedAuthKit().startAppleSignIn(from: vc, completion: completion)
             }, for: .touchUpInside)
@@ -147,7 +78,7 @@ public final class SimplifiedAuthKit
                completion(.success(authorization))
                // 🔑 Also sign into Firebase
             print("Passing data to firebase")
-               kit?.handleAppleAuthorization(authorization: authorization)
+            kit?.handleAppleAuthorization(authorization: authorization, overallCompletion: completion)
            }
         
         func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
@@ -208,76 +139,167 @@ extension SimplifiedAuthKit
         return result
     }
     
-    func handleAppleAuthorization(authorization: ASAuthorization) {
-        print("Someone Called me not you!")
-        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
-           let identityToken = appleIDCredential.identityToken,
-           let idTokenString = String(data: identityToken, encoding: .utf8) {
-            
-            guard let nonce = currentNonce else
-            {
-                fatalError("Invalid state: No login request was sent.")
-            }
-            
-            let credential = OAuthProvider.appleCredential(
-                withIDToken: idTokenString,
-                rawNonce: nonce,
-                fullName: appleIDCredential.fullName
-            )
-            
-            Auth.auth().signIn(with: credential)
-            { authResult, error in
-                if let error = error {
-                    SimplifiedAuthKitLogger.log(
-                        "[SimplifiedAuthKit] Login Rejected — Firebase sign-in failed: \(error.localizedDescription)",
-                        level: .error
-                    )
-                    return
-                }
-                SimplifiedAuthKitLogger.log(
-                    "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(String(describing: authResult?.user.uid))",
-                    level: .info
-                )
-            }
-        }
-    }
+//   func handleAppleAuthorization(authorization: ASAuthorization) {
+//        print("Someone Called me not you!")
+//        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+//           let identityToken = appleIDCredential.identityToken,
+//           let idTokenString = String(data: identityToken, encoding: .utf8) {
+//            
+//            guard let nonce = currentNonce else
+//            {
+//                fatalError("Invalid state: No login request was sent.")
+//            }
+//            
+//            let credential = OAuthProvider.appleCredential(
+//                withIDToken: idTokenString,
+//                rawNonce: nonce,
+//                fullName: appleIDCredential.fullName
+//            )
+//            
+//            Auth.auth().signIn(with: credential)
+//            { authResult, error in
+//                if let error = error {
+//                    SimplifiedAuthKitLogger.log(
+//                        "[SimplifiedAuthKit] Login Rejected — Firebase sign-in failed: \(error.localizedDescription)",
+//                        level: .error
+//                    )
+//                    return
+//                }
+//                SimplifiedAuthKitLogger.log(
+//                    "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(String(describing: authResult?.user.uid))",
+//                    level: .info
+//                )
+//            }
+//        }
+//    }
     
+    func handleAppleAuthorization(authorization: ASAuthorization, overallCompletion: @escaping (AppleSignInResult) -> Void) {
+         print("Handling Apple authorization")
+         if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+            let identityToken = appleIDCredential.identityToken,
+            let idTokenString = String(data: identityToken, encoding: .utf8) {
+             
+             guard let nonce = currentNonce else {
+                 let error = NSError(
+                     domain: "SimplifiedAuthKit",
+                     code: 2,
+                     userInfo: [NSLocalizedDescriptionKey: "Invalid state: No nonce available."]
+                 )
+                 overallCompletion(.failure(error))
+                 return
+             }
+             
+             let credential = OAuthProvider.appleCredential(
+                 withIDToken: idTokenString,
+                 rawNonce: nonce,
+                 fullName: appleIDCredential.fullName
+             )
+             
+             Auth.auth().signIn(with: credential) { authResult, error in
+                 if let error = error {
+                     SimplifiedAuthKitLogger.log(
+                         "[SimplifiedAuthKit] Login Rejected — Firebase sign-in failed: \(error.localizedDescription)",
+                         level: .error
+                     )
+                     let firebaseError = NSError(
+                         domain: "SimplifiedAuthKit",
+                         code: 4,
+                         userInfo: [
+                             NSLocalizedDescriptionKey: "Firebase authentication failed: \(error.localizedDescription)",
+                             NSUnderlyingErrorKey: error
+                         ]
+                     )
+                     overallCompletion(.failure(firebaseError))
+                     return
+                 }
+                 SimplifiedAuthKitLogger.log(
+                     "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(String(describing: authResult?.user.uid))",
+                     level: .info
+                 )
+                 overallCompletion(.success(authorization))
+             }
+         } else {
+             let error = NSError(
+                 domain: "SimplifiedAuthKit",
+                 code: 3,
+                 userInfo: [NSLocalizedDescriptionKey: "Invalid Apple credential."]
+             )
+             overallCompletion(.failure(error))
+         }
+     }
     
     @MainActor 
-    func startAppleSignIn(
-        from presentingVC: UIViewController,
-        completion: @escaping (AppleSignInResult) -> Void
-    )
-    {
-        print("Latest Varson")
-        do {
-            try ensureFirebaseConfigured()  //Checking if Firebase is Configured
-        } catch {
-            completion(.failure(error))
-            return
+        func startAppleSignIn(
+            from presentingVC: UIViewController,
+            completion: @escaping (AppleSignInResult) -> Void
+        )
+        {
+            print("Starting Apple Sign-In")
+            do {
+                try ensureFirebaseConfigured()  // Checking if Firebase is Configured
+            } catch {
+                completion(.failure(error))
+                return
+            }
+            
+            self.presentingViewController = presentingVC
+            self.presentingWindow = presentingVC.view.window
+            
+            let request = ASAuthorizationAppleIDProvider().createRequest()
+            request.requestedScopes = [.fullName, .email]
+
+            let nonce = randomNonceString()
+            currentNonce = nonce
+            request.nonce = sha256(nonce)
+
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            let delegate = AppleSignInDelegate(kit: self, completion: completion)
+            self.activeDelegate = delegate   // retained by the kit
+            controller.delegate = delegate
+            controller.presentationContextProvider = delegate
+            controller.performRequests()
+            
+            // Keep delegate alive during sign-in
+            objc_setAssociatedObject(controller, "appleSignInDelegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            objc_setAssociatedObject(controller, "appleSignInKit", self, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
-        
-        self.presentingViewController = presentingVC
-        self.presentingWindow = presentingVC.view.window
-        
-        let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = [.fullName, .email]
-
-        let nonce = randomNonceString()
-        currentNonce = nonce
-        request.nonce = sha256(nonce)
-
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        let delegate = AppleSignInDelegate(kit: self, completion: completion)
-        self.activeDelegate = delegate   // retained by the kit
-        controller.delegate = delegate
-        controller.presentationContextProvider = delegate
-        controller.performRequests()
-        
-        // Keep delegate alive during sign-in
-        objc_setAssociatedObject(controller, "appleSignInDelegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        objc_setAssociatedObject(controller, "appleSignInKit", self, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
+    
+    
+//    @MainActor 
+//    func startAppleSignIn(
+//        from presentingVC: UIViewController,
+//        completion: @escaping (AppleSignInResult) -> Void
+//    )
+//    {
+//        print("Latest Varson")
+//        do {
+//            try ensureFirebaseConfigured()  //Checking if Firebase is Configured
+//        } catch {
+//            completion(.failure(error))
+//            return
+//        }
+//        
+//        self.presentingViewController = presentingVC
+//        self.presentingWindow = presentingVC.view.window
+//        
+//        let request = ASAuthorizationAppleIDProvider().createRequest()
+//        request.requestedScopes = [.fullName, .email]
+//
+//        let nonce = randomNonceString()
+//        currentNonce = nonce
+//        request.nonce = sha256(nonce)
+//
+//        let controller = ASAuthorizationController(authorizationRequests: [request])
+//        let delegate = AppleSignInDelegate(kit: self, completion: completion)
+//        self.activeDelegate = delegate   // retained by the kit
+//        controller.delegate = delegate
+//        controller.presentationContextProvider = delegate
+//        controller.performRequests()
+//        
+//        // Keep delegate alive during sign-in
+//        objc_setAssociatedObject(controller, "appleSignInDelegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+//        objc_setAssociatedObject(controller, "appleSignInKit", self, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+//    }
    
 }
 
