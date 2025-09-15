@@ -3,9 +3,10 @@
 
 import UIKit
 import AuthenticationServices
-import FirebaseAuth
+@_exported import FirebaseAuth
 import CryptoKit
 import FirebaseCore
+@_exported import AuthenticationServices // No need to import any longer
 
 public final class SimplifiedAuthKit 
 {
@@ -20,6 +21,14 @@ public final class SimplifiedAuthKit
     //@MainActor public static var sharedKit: SimplifiedAuthKit?
     
     public init() {}
+    
+    public static func styleAppleButton(style: ASAuthorizationAppleIDButton.Style = .black) -> ASAuthorizationAppleIDButton {
+        return ASAuthorizationAppleIDButton(type: .signIn, style: style)
+    }
+    
+    
+  
+    
 
     // MARK: - Firebase Configuration Helper
     @MainActor private func ensureFirebaseConfigured() throws
@@ -218,6 +227,10 @@ extension SimplifiedAuthKit
                      )
                      overallCompletion(.failure(firebaseError))
                      return
+                    
+                     //Add Auth Results to Completion
+                     
+
                  }
                  SimplifiedAuthKitLogger.log(
                      "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(String(describing: authResult?.user.uid))",
