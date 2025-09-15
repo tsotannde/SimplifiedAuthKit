@@ -16,11 +16,11 @@ public final class SimplifiedAuthKit
     public typealias AppleSignInResult = Result<ASAuthorization, Error>
     private var activeDelegate: AppleSignInDelegate?   //keep delegate alive
    
-    @MainActor public static var sharedKit: SimplifiedAuthKit?
+    //not needed
+    //@MainActor public static var sharedKit: SimplifiedAuthKit?
     
-    public  init() {
-           
-        }
+    public init() {}
+
     // MARK: - Firebase Configuration Helper
     @MainActor private func ensureFirebaseConfigured() throws
     {

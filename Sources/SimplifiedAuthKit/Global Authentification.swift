@@ -11,48 +11,28 @@ import FirebaseAuth
 import CryptoKit
 import FirebaseCore
 
+public struct SimplifiedAuthUser
+{
+    public let uid: String?
+    public let email: String?
+    public let displayName: String?
+    public let photoURL: URL?
+}
+
 
 // MARK: - Session Helpers
 extension SimplifiedAuthKit
 {
+    @MainActor private static var authHandle: AuthStateDidChangeListenerHandle?
     
     /// Checks if a user is currently signed in
-    /// - Parameter completion: Optional. If provided, the result will be passed asynchronously.
-    /// - Returns: `Bool` if called synchronously.
-    @discardableResult
-    public func isSignedIn(completion: ((Bool) -> Void)? = nil) -> Bool {
-        let signedIn = Auth.auth().currentUser != nil
-        
-        if signedIn {
-            print("✅ User is signed in")
-        } else {
-            print("⚠️ No user is signed in")
-        }
-        
-        // Fire completion if provided
-        completion?(signedIn)
-        
-        return signedIn
+    /// - Returns: `Bool` indicating whether a user is signed in.
+    public static func isSignedIn() -> Bool {
+        return Auth.auth().currentUser != nil
     }
-//    public func isSignedIn(completion: ((Bool) -> Void)? = nil) -> Bool {
-//        let signedIn = Auth.auth().currentUser != nil
-//        
-//        if signedIn {
-//            print("✅ User is signed in")
-//        } else {
-//            print("⚠️ No user is signed in")
-//        }
-//        
-//        // Call completion if one was provided
-//        completion?(signedIn)
-//        
-//        return signedIn
-//    }
-//    
 
     /// Signs out the current user
-    @discardableResult
-    public func signOut() -> Bool {
+    public static func signOut() -> Bool {
         do {
             try Auth.auth().signOut()
             print("✅ Successfully signed out")
@@ -63,21 +43,60 @@ extension SimplifiedAuthKit
         }
     }
     
-    //
-    
-    
-    @discardableResult
-    public func observeAuthChanges(completion: @escaping (User?) -> Void) -> AuthStateDidChangeListenerHandle {
-        let handle = Auth.auth().addStateDidChangeListener { _, user in
-            if let user = user {
-                print("🔄 Auth state changed: User signed in (\(user.uid))")
-            } else {
-                print("🔄 Auth state changed: User signed out")
-            }
-            completion(user)
-        }
-        return handle
+   
+
+    public static func currentUser() -> SimplifiedAuthUser?
+    {
+        guard let user = Auth.auth().currentUser else { return nil }
+        return SimplifiedAuthUser(
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+        )
     }
+    
+    
+    /// Returns the current Firebase user ID (UID), or nil if not signed in.
+    public static func currentUserID() -> String? {
+        return Auth.auth().currentUser?.uid
+    }
+    
+    /// Returns the current Firebase user's email, or nil if not available.
+    public static func currentUserEmail() -> String? {
+        return Auth.auth().currentUser?.email
+    }
+    
+    /// Returns the current Firebase user's display name, or nil if not available.
+    public static func currentUserDisplayName() -> String? {
+        return Auth.auth().currentUser?.displayName
+    }
+    
+    /// Returns the current Firebase user's profile photo URL, or nil if not available.
+    public static func currentUserPhotoURL() -> URL? {
+        return Auth.auth().currentUser?.photoURL
+    }
+    
+    
+    
+    @MainActor @discardableResult
+    /// Observe Firebase auth state changes without requiring the caller to store a handle.
+        /// - Parameter completion: Closure called whenever auth state changes.
+        public static func observeAuthChanges(_ completion: @escaping (User?) -> Void) {
+            // Clean up old handle if already set
+            if let handle = authHandle {
+                Auth.auth().removeStateDidChangeListener(handle)
+            }
+            
+            authHandle = Auth.auth().addStateDidChangeListener { _, user in
+                if let user = user {
+                    print("🔄 Auth state changed: User signed in (\(user.uid))")
+                } else {
+                    print("🔄 Auth state changed: User signed out")
+                }
+                completion(user)
+            }
+        }
     
     /// Removes a previously added auth state change listener
     public func removeAuthObserver(_ handle: AuthStateDidChangeListenerHandle) {
