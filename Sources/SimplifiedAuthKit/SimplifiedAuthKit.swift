@@ -354,87 +354,122 @@ extension ASAuthorizationAppleIDButton {
 
 extension SimplifiedAuthKit
 {
-    @MainActor
-    public static func signInWithGoogle(
-        from viewController: UIViewController,
-        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void = { _ in }
-    ) {
-        let kit = SimplifiedAuthKit()
-        kit.startGoogleSignIn(from: viewController, completion: completion)
-    }
-    
-    @MainActor
-    private func startGoogleSignIn(
-        from presentingVC: UIViewController,
-        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void
-    ) {
-        do {
-            try ensureFirebaseConfigured()
-        } catch {
-            completion(.failure(error))
-            return
-        }
-
-        guard let clientID = FirebaseApp.app()?.options.clientID else {
-            let error = NSError(
-                domain: "SimplifiedAuthKit",
-                code: 6,
-                userInfo: [NSLocalizedDescriptionKey: "Missing Firebase clientID"]
-            )
-            completion(.failure(error))
-            return
-        }
-
-        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
-
-        GIDSignIn.sharedInstance.signIn(withPresenting: presentingVC) { result, error in
-            if let error = error {
+     @MainActor
+        public static func signInWithGoogle(
+            from viewController: UIViewController,
+            completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void = { _ in }
+        )
+    {
+        // Pre-check reversed client ID
+            guard hasGoogleURLScheme() else {
+                let error = NSError(
+                    domain: "SimplifiedAuthKit",
+                    code: 10,
+                    userInfo: [NSLocalizedDescriptionKey: "Google Sign-In skipped: missing reversed client ID in Info.plist > URL Types."]
+                )
+                SimplifiedAuthKitLogger.log("⚠️ Google Sign-In skipped — reversed client ID missing", level: .warning)
                 completion(.failure(error))
                 return
             }
 
-            guard
-                let user = result?.user,
-                let idToken = user.idToken?.tokenString
-            else {
+        
+            let kit = SimplifiedAuthKit()
+            kit.startGoogleSignIn(from: viewController, completion: completion)
+        }
+    
+    private static func hasGoogleURLScheme() -> Bool {
+        guard let urlTypes = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] else {
+            return false
+        }
+        
+        for type in urlTypes {
+            if let schemes = type["CFBundleURLSchemes"] as? [String] {
+                if schemes.contains(where: { $0.contains("googleusercontent.apps") }) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+    
+        
+        @MainActor
+        private func startGoogleSignIn(
+            from presentingVC: UIViewController,
+            completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void
+        ) {
+            do {
+                try ensureFirebaseConfigured()
+            } catch {
+                completion(.failure(error))
+                return
+            }
+
+            guard let clientID = FirebaseApp.app()?.options.clientID else {
                 let error = NSError(
                     domain: "SimplifiedAuthKit",
-                    code: 7,
-                    userInfo: [NSLocalizedDescriptionKey: "No Google user or token"]
+                    code: 6,
+                    userInfo: [NSLocalizedDescriptionKey: "Missing Firebase clientID"]
                 )
                 completion(.failure(error))
                 return
             }
 
-            let credential = GoogleAuthProvider.credential(
-                withIDToken: idToken,
-                accessToken: user.accessToken.tokenString
-            )
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
 
-            Auth.auth().signIn(with: credential) { authResult, error in
+            GIDSignIn.sharedInstance.signIn(withPresenting: presentingVC) { result, error in
                 if let error = error {
                     completion(.failure(error))
                     return
                 }
 
-                guard let authResult = authResult else {
+                guard
+                    let user = result?.user,
+                    let idToken = user.idToken?.tokenString
+                else {
                     let error = NSError(
                         domain: "SimplifiedAuthKit",
-                        code: 8,
-                        userInfo: [NSLocalizedDescriptionKey: "No Firebase auth result"]
+                        code: 7,
+                        userInfo: [NSLocalizedDescriptionKey: "No Google user or token"]
                     )
+                    print("Firebase Login Failed badly1")
                     completion(.failure(error))
                     return
                 }
 
-                let simplifiedUser = SimplifiedAuthUser(
-                    uid: authResult.user.uid,
-                    email: authResult.user.email,
-                    displayName: authResult.user.displayName,
-                    photoURL: authResult.user.photoURL
+                let credential = GoogleAuthProvider.credential(
+                    withIDToken: idToken,
+                    accessToken: user.accessToken.tokenString
                 )
-                completion(.success(simplifiedUser))
+
+                Auth.auth().signIn(with: credential) { authResult, error in
+                    if let error = error {
+                        print("Firebase Login Failed badly2")
+                        completion(.failure(error))
+                        return
+                    }
+
+                    guard let authResult = authResult else {
+                        let error = NSError(
+                            domain: "SimplifiedAuthKit",
+                            code: 8,
+                            userInfo: [NSLocalizedDescriptionKey: "No Firebase auth result"]
+                        )
+                        print("Firebase Login Failed badly3")
+                        completion(.failure(error))
+                        return
+                    }
+
+                    let simplifiedUser = SimplifiedAuthUser(
+                        uid: authResult.user.uid,
+                        email: authResult.user.email,
+                        displayName: authResult.user.displayName,
+                        photoURL: authResult.user.photoURL
+                    )
+                    completion(.success(simplifiedUser))
+                }
             }
         }
-    }
+    
+    
 }
