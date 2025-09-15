@@ -18,7 +18,7 @@ public final class SimplifiedAuthKit
    
     @MainActor public static var sharedKit: SimplifiedAuthKit?
     
-    private init() {
+    public  init() {
            
         }
     // MARK: - Firebase Configuration Helper
