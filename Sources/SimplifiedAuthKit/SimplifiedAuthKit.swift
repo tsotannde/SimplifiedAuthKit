@@ -352,3 +352,89 @@ extension ASAuthorizationAppleIDButton {
     }
 }
 
+extension SimplifiedAuthKit
+{
+    @MainActor
+    public static func signInWithGoogle(
+        from viewController: UIViewController,
+        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void = { _ in }
+    ) {
+        let kit = SimplifiedAuthKit()
+        kit.startGoogleSignIn(from: viewController, completion: completion)
+    }
+    
+    @MainActor
+    private func startGoogleSignIn(
+        from presentingVC: UIViewController,
+        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void
+    ) {
+        do {
+            try ensureFirebaseConfigured()
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        guard let clientID = FirebaseApp.app()?.options.clientID else {
+            let error = NSError(
+                domain: "SimplifiedAuthKit",
+                code: 6,
+                userInfo: [NSLocalizedDescriptionKey: "Missing Firebase clientID"]
+            )
+            completion(.failure(error))
+            return
+        }
+
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+
+        GIDSignIn.sharedInstance.signIn(withPresenting: presentingVC) { result, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard
+                let user = result?.user,
+                let idToken = user.idToken?.tokenString
+            else {
+                let error = NSError(
+                    domain: "SimplifiedAuthKit",
+                    code: 7,
+                    userInfo: [NSLocalizedDescriptionKey: "No Google user or token"]
+                )
+                completion(.failure(error))
+                return
+            }
+
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: user.accessToken.tokenString
+            )
+
+            Auth.auth().signIn(with: credential) { authResult, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                guard let authResult = authResult else {
+                    let error = NSError(
+                        domain: "SimplifiedAuthKit",
+                        code: 8,
+                        userInfo: [NSLocalizedDescriptionKey: "No Firebase auth result"]
+                    )
+                    completion(.failure(error))
+                    return
+                }
+
+                let simplifiedUser = SimplifiedAuthUser(
+                    uid: authResult.user.uid,
+                    email: authResult.user.email,
+                    displayName: authResult.user.displayName,
+                    photoURL: authResult.user.photoURL
+                )
+                completion(.success(simplifiedUser))
+            }
+        }
+    }
+}
