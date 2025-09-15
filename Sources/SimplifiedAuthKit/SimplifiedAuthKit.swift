@@ -1,8 +1,9 @@
 import UIKit
+@_exported import AuthenticationServices
 import FirebaseAuth
 import CryptoKit
 import FirebaseCore
-@_exported import AuthenticationServices
+import GoogleSignIn
 
 /// A lightweight struct containing user information after sign-in.
 public struct SimplifiedAuthUser {
@@ -38,6 +39,7 @@ public final class SimplifiedAuthKit {
         }
     }
     
+    // MARK: - Apple Sign-In
     /// Creates a styled Apple Sign-In button without sign-in logic.
     /// - Parameter style: The button style (default: .black).
     /// - Returns: A configured `ASAuthorizationAppleIDButton`.
@@ -61,15 +63,30 @@ public final class SimplifiedAuthKit {
         let button = ASAuthorizationAppleIDButton(type: .signIn, style: style)
         if let completion = completion {
             button.addAction(UIAction { _ in
-                SimplifiedAuthKit().startAppleSignIn(from: viewController, completion: completion)
+                Self.signInWithApple(from: viewController, completion: completion)
             }, for: .touchUpInside)
         } else {
             button.addAction(UIAction { _ in
-                SimplifiedAuthKit().startAppleSignIn(from: viewController) { _ in }
+                Self.signInWithApple(from: viewController) { _ in }
             }, for: .touchUpInside)
         }
         return button
     }
+    
+    /// Initiates Apple Sign-In from anywhere.
+    /// - Parameters:
+    ///   - viewController: The view controller presenting the sign-in UI.
+    ///   - completion: Optional closure called with the sign-in result, providing a `SimplifiedAuthUser` on success.
+    @MainActor
+    public static func signInWithApple(
+        from viewController: UIViewController,
+        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void = { _ in }
+    ) {
+        let kit = SimplifiedAuthKit()
+        kit.startAppleSignIn(from: viewController, completion: completion)
+    }
+    
+    
     
     // MARK: - Session Helpers
     @MainActor
@@ -261,7 +278,7 @@ public final class SimplifiedAuthKit {
     }
     
     @MainActor
-     public  func startAppleSignIn(
+    private func startAppleSignIn(
         from presentingVC: UIViewController,
         completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void
     ) {
@@ -293,6 +310,9 @@ public final class SimplifiedAuthKit {
         objc_setAssociatedObject(controller, "appleSignInDelegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         objc_setAssociatedObject(controller, "appleSignInKit", self, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
+    
+    // MARK: - Google Sign-In Helper Functions
+ 
     
     private final class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
         private let completion: (Result<SimplifiedAuthUser, Error>) -> Void
@@ -328,6 +348,7 @@ extension ASAuthorizationAppleIDButton {
     ///   - vc: The view controller presenting the sign-in UI.
     ///   - completion: Closure called with the sign-in result, providing a `SimplifiedAuthUser` on success.
     public func startAppleSignIn(from vc: UIViewController, completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void) {
-        SimplifiedAuthKit().startAppleSignIn(from: vc, completion: completion)
+        SimplifiedAuthKit.signInWithApple(from: vc, completion: completion)
     }
 }
+
