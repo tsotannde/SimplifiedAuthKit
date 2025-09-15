@@ -367,7 +367,7 @@ extension SimplifiedAuthKit
                     code: 10,
                     userInfo: [NSLocalizedDescriptionKey: "Google Sign-In skipped: missing reversed client ID in Info.plist > URL Types."]
                 )
-                SimplifiedAuthKitLogger.log("⚠️ Google Sign-In skipped — reversed client ID missing", level: .warning)
+                SimplifiedAuthKitLogger.log("⚠️ Google Sign-In skipped — reversed client ID missing", level: .error)
                 completion(.failure(error))
                 return
             }
