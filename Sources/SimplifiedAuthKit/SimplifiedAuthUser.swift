@@ -2,7 +2,14 @@
 //  File.swift
 //  SimplifiedAuthKit
 //
-//  Created by Developer on 9/15/25.
+//  Created by Adebayo Sotannde on 9/15/25.
 //
 
-import Foundation
+/// A lightweight struct containing user information after sign-in.
+public struct SimplifiedAuthUser
+{
+    public let uid: String?
+    public let email: String?
+    public let displayName: String?
+    public let photoURL: URL?
+}

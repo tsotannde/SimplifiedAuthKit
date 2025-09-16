@@ -5,9 +5,4 @@
 //  Created by Adebayo Sotannde on 9/15/25.
 //
 
-// MARK: - Provider
-    public enum Provider
-{
-        case apple
-        case google
-}
+

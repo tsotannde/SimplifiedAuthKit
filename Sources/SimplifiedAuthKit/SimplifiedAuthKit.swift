@@ -5,13 +5,6 @@ import CryptoKit
 import FirebaseCore
 @_exported import GoogleSignIn
 
-/// A lightweight struct containing user information after sign-in.
-public struct SimplifiedAuthUser {
-    public let uid: String?
-    public let email: String?
-    public let displayName: String?
-    public let photoURL: URL?
-}
 
 public final class SimplifiedAuthKit {
     fileprivate var currentNonce: String?
@@ -418,38 +411,16 @@ extension SimplifiedAuthKit
     public static func styleGIDSignInButton() -> GIDSignInButton {
         
         let button = GIDSignInButton()
-            button.style = .standard   // 👈 includes the text
+            button.style = .standard   //
             button.colorScheme = .light
             return button
     }
     
+
     @MainActor
-    public static func makeGoogleButton() -> UIButton {
-        let button = UIButton(type: .system)
-
-        // Default styling
-        button.backgroundColor = .white
-        button.layer.cornerRadius = 12
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.lightGray.cgColor
-        button.clipsToBounds = true
-
-        // Title
-        button.setTitle("Sign in with Google", for: .normal)
-        button.setTitleColor(.darkGray, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-
-        // Google "G" logo 
-        if let googleLogo = UIImage(named: "googleLogo")?.withRenderingMode(.alwaysOriginal) {
-            button.setImage(googleLogo, for: .normal)
-        }
-
-        // Center image + text nicely
-        button.contentHorizontalAlignment = .center
-        button.imageEdgeInsets = UIEdgeInsets(top: 0, left: -12, bottom: 0, right: 0)  // push image left
-           button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)   // push text right
-
-        return button
+    public static func makeGoogleButton(styled: Bool = true) -> UIButton {
+        // Returns a self-updating button that adapts to Light/Dark mode automatically.
+        return GoogleSignInButton(styled: styled)
     }
         
         @MainActor
@@ -547,3 +518,6 @@ extension SimplifiedAuthKit
     
     
 }
+
+
+
