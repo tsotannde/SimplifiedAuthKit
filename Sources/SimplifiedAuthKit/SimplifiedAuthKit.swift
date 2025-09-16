@@ -7,16 +7,16 @@ import FirebaseCore
 
 
 public final class SimplifiedAuthKit {
-    fileprivate var currentNonce: String?
-    private weak var presentingWindow: UIWindow?
-    private weak var presentingViewController: UIViewController?
-    private var activeDelegate: AppleSignInDelegate?
+    internal var currentNonce: String?
+    internal weak var presentingWindow: UIWindow?
+    internal weak var presentingViewController: UIViewController?
+    internal var activeDelegate: AppleSignInDelegate?
     
     public init() {}
     
     // MARK: - Firebase Configuration Helper
     @MainActor
-    private func ensureFirebaseConfigured() throws {
+    internal func ensureFirebaseConfigured() throws {
         if FirebaseApp.app() == nil {
             guard let filePath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
                   let options = FirebaseOptions(contentsOfFile: filePath) else {
@@ -32,52 +32,24 @@ public final class SimplifiedAuthKit {
         }
     }
     
-    // MARK: - Apple Sign-In
-    /// Creates a styled Apple Sign-In button without sign-in logic.
-    /// - Parameter style: The button style (default: .black).
-    /// - Returns: A configured `ASAuthorizationAppleIDButton`.
     @MainActor
-    public static func styleAppleButton(style: ASAuthorizationAppleIDButton.Style = .black) -> ASAuthorizationAppleIDButton {
-        return ASAuthorizationAppleIDButton(type: .signIn, style: style)
-    }
-    
-    /// Creates a styled Apple Sign-In button that initiates authentication.
-    /// - Parameters:
-    ///   - viewController: The view controller presenting the sign-in UI.
-    ///   - style: The button style (default: .black).
-    ///   - completion: Optional closure called with the sign-in result, providing a `SimplifiedAuthUser` on success.
-    /// - Returns: A configured `ASAuthorizationAppleIDButton`.
-    @MainActor
-    public static func makeAppleButton(
+    public static func signIn(
+        with provider: Provider,
         from viewController: UIViewController,
-        style: ASAuthorizationAppleIDButton.Style = .black,
-        completion: ((Result<SimplifiedAuthUser, Error>) -> Void)? = nil
-    ) -> ASAuthorizationAppleIDButton {
-        let button = ASAuthorizationAppleIDButton(type: .signIn, style: style)
-        if let completion = completion {
-            button.addAction(UIAction { _ in
-                Self.signInWithApple(from: viewController, completion: completion)
-            }, for: .touchUpInside)
-        } else {
-            button.addAction(UIAction { _ in
-                Self.signInWithApple(from: viewController) { _ in }
-            }, for: .touchUpInside)
-        }
-        return button
-    }
-    
-    /// Initiates Apple Sign-In from anywhere.
-    /// - Parameters:
-    ///   - viewController: The view controller presenting the sign-in UI.
-    ///   - completion: Optional closure called with the sign-in result, providing a `SimplifiedAuthUser` on success.
-    @MainActor
-    public static func signInWithApple(
-        from viewController: UIViewController,
-        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void = { _ in }
+        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void
     ) {
-        let kit = SimplifiedAuthKit()
-        kit.startAppleSignIn(from: viewController, completion: completion)
+        switch provider {
+        case .apple:
+            Self.signInWithApple(from: viewController, completion: completion)
+            
+        case .google:
+            Self.signInWithGoogle(from: viewController, completion: completion)
+        }
     }
+    
+    
+    
+    
     
     
     
@@ -158,44 +130,9 @@ public final class SimplifiedAuthKit {
         print("🧹 Removed auth state listener")
     }
     
-    // MARK: - Apple Sign-In Helper Functions
-    private func sha256(_ input: String) -> String {
-        let inputData = Data(input.utf8)
-        let hashedData = SHA256.hash(data: inputData)
-        return hashedData.compactMap {
-            String(format: "%02x", $0)
-        }.joined()
-    }
+  
     
-    private func randomNonceString(length: Int = 32) -> String {
-        precondition(length > 0)
-        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-        var result = ""
-        var remainingLength = length
-        
-        while remainingLength > 0 {
-            let randoms: [UInt8] = (0 ..< 16).map { _ in
-                var random: UInt8 = 0
-                let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
-                if errorCode != errSecSuccess {
-                    fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
-                }
-                return random
-            }
-            
-            randoms.forEach { random in
-                if remainingLength == 0 {
-                    return
-                }
-                if random < charset.count {
-                    result.append(charset[Int(random)])
-                    remainingLength -= 1
-                }
-            }
-        }
-        return result
-    }
-    
+   
     private func handleAppleAuthorization(authorization: ASAuthorization, completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void) {
         print("Handling Apple authorization")
         guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
@@ -270,44 +207,12 @@ public final class SimplifiedAuthKit {
         }
     }
     
-    @MainActor
-    private func startAppleSignIn(
-        from presentingVC: UIViewController,
-        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void
-    ) {
-        print("Starting Apple Sign-In")
-        do {
-            try ensureFirebaseConfigured()
-        } catch {
-            completion(.failure(error))
-            return
-        }
-        
-        self.presentingViewController = presentingVC
-        self.presentingWindow = presentingVC.view.window
-        
-        let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = [.fullName, .email]
-        
-        let nonce = randomNonceString()
-        currentNonce = nonce
-        request.nonce = sha256(nonce)
-        
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        let delegate = AppleSignInDelegate(kit: self, completion: completion)
-        self.activeDelegate = delegate
-        controller.delegate = delegate
-        controller.presentationContextProvider = delegate
-        controller.performRequests()
-        
-        objc_setAssociatedObject(controller, "appleSignInDelegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        objc_setAssociatedObject(controller, "appleSignInKit", self, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
+    
     
     // MARK: - Google Sign-In Helper Functions
  
     
-    private final class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    internal final class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
         private let completion: (Result<SimplifiedAuthUser, Error>) -> Void
         private weak var kit: SimplifiedAuthKit?
         
