@@ -3,7 +3,7 @@ import UIKit
 import FirebaseAuth
 import CryptoKit
 import FirebaseCore
-import GoogleSignIn
+@_exported import GoogleSignIn
 
 /// A lightweight struct containing user information after sign-in.
 public struct SimplifiedAuthUser {
@@ -270,7 +270,7 @@ public final class SimplifiedAuthKit {
                 photoURL: authResult.user.photoURL
             )
             SimplifiedAuthKitLogger.log(
-                "[SimplifiedAuthKit] ✅ Signed in with Apple and Firebase: \(authResult.user.uid)",
+                "✅ Signed in with Apple and Firebase: \(authResult.user.email)",
                 level: .info
             )
             completion(.success(user))
@@ -367,7 +367,20 @@ extension SimplifiedAuthKit
                     code: 10,
                     userInfo: [NSLocalizedDescriptionKey: "Google Sign-In skipped: missing reversed client ID in Info.plist > URL Types."]
                 )
-                SimplifiedAuthKitLogger.log("⚠️ Google Sign-In skipped — reversed client ID missing", level: .error)
+                // Fetch the Client ID for the user
+                if let requiredScheme = requiredGoogleScheme() {
+                    SimplifiedAuthKitLogger.log(
+                        "⚠️ Google Sign-In skipped — missing reversed client ID.\n➡️ Please add this to Info.plist > URL Types > URL Schemes: \(requiredScheme)",
+                        level: .error
+                    )
+                } else {
+                    SimplifiedAuthKitLogger.log(
+                        "⚠️ Google Sign-In skipped — missing GoogleService-Info.plist or REVERSED_CLIENT_ID.",
+                        level: .error
+                    )
+                }
+                
+                
                 completion(.failure(error))
                 return
             }
@@ -376,6 +389,15 @@ extension SimplifiedAuthKit
             let kit = SimplifiedAuthKit()
             kit.startGoogleSignIn(from: viewController, completion: completion)
         }
+    
+    private static func requiredGoogleScheme() -> String? {
+        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+              let dict = NSDictionary(contentsOfFile: path),
+              let clientID = dict["REVERSED_CLIENT_ID"] as? String else {
+            return nil
+        }
+        return clientID
+    }
     
     private static func hasGoogleURLScheme() -> Bool {
         guard let urlTypes = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] else {
@@ -392,6 +414,43 @@ extension SimplifiedAuthKit
         return false
     }
     
+    @MainActor
+    public static func styleGIDSignInButton() -> GIDSignInButton {
+        
+        let button = GIDSignInButton()
+            button.style = .standard   // 👈 includes the text
+            button.colorScheme = .light
+            return button
+    }
+    
+    @MainActor
+    public static func makeGoogleButton() -> UIButton {
+        let button = UIButton(type: .system)
+
+        // Default styling
+        button.backgroundColor = .white
+        button.layer.cornerRadius = 12
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.lightGray.cgColor
+        button.clipsToBounds = true
+
+        // Title
+        button.setTitle("Sign in with Google", for: .normal)
+        button.setTitleColor(.darkGray, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+
+        // Google "G" logo 
+        if let googleLogo = UIImage(named: "googleLogo")?.withRenderingMode(.alwaysOriginal) {
+            button.setImage(googleLogo, for: .normal)
+        }
+
+        // Center image + text nicely
+        button.contentHorizontalAlignment = .center
+        button.imageEdgeInsets = UIEdgeInsets(top: 0, left: -12, bottom: 0, right: 0)  // push image left
+           button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)   // push text right
+
+        return button
+    }
         
         @MainActor
         private func startGoogleSignIn(
@@ -444,10 +503,21 @@ extension SimplifiedAuthKit
 
                 Auth.auth().signIn(with: credential) { authResult, error in
                     if let error = error {
-                        print("Firebase Login Failed badly2")
-                        completion(.failure(error))
-                        return
-                    }
+                              
+                               
+                               SimplifiedAuthKitLogger.log(
+                                   """
+                                    ❌ Login Rejected — Firebase sign-in with Google failed.
+                                   Reason: \(error.localizedDescription)
+                                   Action: Ensure Google Sign-In is enabled in your Firebase Console 
+                                           (Authentication → Sign-in Method → Google) 
+                                   """,
+                                   level: .error
+                               )
+                               
+                               completion(.failure(error))
+                               return
+                           }
 
                     guard let authResult = authResult else {
                         let error = NSError(
@@ -465,6 +535,10 @@ extension SimplifiedAuthKit
                         email: authResult.user.email,
                         displayName: authResult.user.displayName,
                         photoURL: authResult.user.photoURL
+                    )
+                    SimplifiedAuthKitLogger.log(
+                        "✅ Signed in with Google and Firebase: \(authResult.user.email)",
+                        level: .info
                     )
                     completion(.success(simplifiedUser))
                 }
