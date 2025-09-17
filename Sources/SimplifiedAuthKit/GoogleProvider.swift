@@ -71,19 +71,12 @@ class GoogleProvider
    }
    
    @MainActor
-   public static func styleGIDSignInButton() -> GIDSignInButton {
+   public static func makeGoogleButton(
+    color: ButtonColor = .black,
+    adaptive: Bool = false
+) -> UIButton {
        
-       let button = GIDSignInButton()
-           button.style = .standard   //
-           button.colorScheme = .light
-           return button
-   }
-   
-
-   @MainActor
-   public static func makeGoogleButton(styled: Bool = true) -> UIButton {
-       // Returns a self-updating button that adapts to Light/Dark mode automatically.
-       return GoogleSignInButton(styled: styled)
+       return GoogleSignInButton(color: color, adaptive: adaptive)
    }
        
        @MainActor

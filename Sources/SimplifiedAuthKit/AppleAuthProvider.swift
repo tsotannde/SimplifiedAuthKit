@@ -13,7 +13,7 @@ import FirebaseCore
 
 
 //MARK: - Apple Sigin
-class AppleAuthProvider
+class AppleProvider
 {
     internal var currentNonce: String?
     internal weak var presentingWindow: UIWindow?
@@ -26,7 +26,7 @@ class AppleAuthProvider
     internal static func signInWithApple(from viewController: UIViewController,
         completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void = { _ in })
     {
-        let kit = AppleAuthProvider()
+        let kit = AppleProvider()
         kit.startAppleSignIn(from: viewController, completion: completion)
     }
     
@@ -98,32 +98,16 @@ class AppleAuthProvider
         }
         return result
     }
+
     
     @MainActor
-    private static func styleAppleButton(style: ASAuthorizationAppleIDButton.Style = .black) -> ASAuthorizationAppleIDButton {
-        return ASAuthorizationAppleIDButton(type: .signIn, style: style)
+    public static func makeAppleButton(
+        color: ButtonColor = .black,
+        adaptive: Bool = false
+    ) -> UIButton {
+        return AppleSignInButton(color: color, adaptive: adaptive)
     }
-    
-    
-    @MainActor
-    private static func makeAppleButton(
-        from viewController: UIViewController,
-        style: ASAuthorizationAppleIDButton.Style = .black,
-        completion: ((Result<SimplifiedAuthUser, Error>) -> Void)? = nil
-    ) -> ASAuthorizationAppleIDButton {
-        let button = ASAuthorizationAppleIDButton(type: .signIn, style: style)
-        if let completion = completion {
-            button.addAction(UIAction { _ in
-                Self.signInWithApple(from: viewController, completion: completion)
-            }, for: .touchUpInside)
-        } else {
-            button.addAction(UIAction { _ in
-                Self.signInWithApple(from: viewController) { _ in }
-            }, for: .touchUpInside)
-        }
-        return button
-    }
-    
+
     internal func handleAppleAuthorization(authorization: ASAuthorization, completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void) {
         print("Handling Apple authorization")
         guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
@@ -201,9 +185,9 @@ class AppleAuthProvider
 
 internal final class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     private let completion: (Result<SimplifiedAuthUser, Error>) -> Void
-    private weak var kit: AppleAuthProvider?
+    private weak var kit: AppleProvider?
     
-    init(kit: AppleAuthProvider, completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void) {
+    init(kit: AppleProvider, completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void) {
         self.kit = kit
         self.completion = completion
     }

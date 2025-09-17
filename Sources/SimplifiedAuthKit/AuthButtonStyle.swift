@@ -6,8 +6,14 @@
 //
 
 
-public enum AuthButtonStyle
+public enum AuthButtonStyle 
 {
-    case apple(ASAuthorizationAppleIDButton.Style)
-    case google(Bool)
+    case apple(color: ButtonColor, adaptiveToDarkMode: Bool)
+    case google(color: ButtonColor, adaptiveToDarkMode: Bool)
+}
+
+public enum ButtonColor 
+{
+    case black
+    case white
 }

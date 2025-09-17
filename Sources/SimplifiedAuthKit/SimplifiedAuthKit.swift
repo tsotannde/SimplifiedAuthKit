@@ -10,55 +10,36 @@ public final class SimplifiedAuthKit
 {
     public init() {}
     
-    let appleAuth = AppleAuthProvider()
-   
-    
     @MainActor
-    public static func signIn(
-        with provider: Provider,
-        from viewController: UIViewController,
-        completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void
-    ) {
-        switch provider {
+    public static func signIn(with provider: Provider,from viewController: UIViewController,completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void) 
+    {
+        switch provider 
+        {
         case .apple:
-            AppleAuthProvider.signInWithApple(from: viewController, completion: completion)
-           
-            
+            AppleProvider.signInWithApple(from: viewController, completion: completion)
         case .google:
             GoogleProvider.signInWithGoogle(from: viewController, completion: completion)
         }
     }
     
-//    //✅
-//    @MainActor
-//    public static func makeAuthButton(for provider: Provider,style: AuthButtonStyle) -> UIView
-//    {
-//        switch (provider, style)
-//        {
-//        case (.apple, .apple(let appleStyle)):
-//            return ASAuthorizationAppleIDButton(type: .signIn, style: appleStyle)
-//
-//        case (.google, .google(let styled)):
-//            return GoogleProvider.makeGoogleButton(styled: styled)
-//            
-//        default:
-//            fatalError("❌ Invalid style for provider \(provider). Use the correct AuthButtonStyle case.")
-//        }
-//    }
     
     @MainActor
-    public static func makeAuthButton(for provider: Provider, style: AuthButtonStyle) -> UIButton {
-        switch (provider, style) {
-        case (.apple, .apple(let appleStyle)):
-            return ASAuthorizationAppleIDButton(type: .signIn, style: appleStyle)
-
-        case (.google, .google(let styled)):
-            return GoogleProvider.makeGoogleButton(styled: styled)
-
+    public static func makeAuthButton(
+        for provider: Provider,
+        color: ButtonColor = .black,
+        adaptive: Bool = false
+    ) -> UIButton {
+        switch provider {
+        case .apple:
+            return AppleProvider.makeAppleButton(color: color, adaptive: adaptive)
+        case .google:
+            return GoogleProvider.makeGoogleButton(color: color, adaptive: adaptive)
         default:
             fatalError("❌ Invalid style for provider \(provider). Use the correct AuthButtonStyle case.")
         }
     }
+    
+    
         public static func isSignedIn() -> Bool {
             return GlobalAuthentification.isSignedIn()
         }
@@ -95,7 +76,7 @@ extension ASAuthorizationAppleIDButton {
     ///   - vc: The view controller presenting the sign-in UI.
     ///   - completion: Closure called with the sign-in result, providing a `SimplifiedAuthUser` on success.
     public func startAppleSignIn(from vc: UIViewController, completion: @escaping (Result<SimplifiedAuthUser, Error>) -> Void) {
-        AppleAuthProvider.signInWithApple(from: vc, completion: completion)
+        AppleProvider.signInWithApple(from: vc, completion: completion)
     }
 }
 

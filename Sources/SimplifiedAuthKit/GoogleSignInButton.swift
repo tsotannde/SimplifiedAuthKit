@@ -8,63 +8,57 @@ import FirebaseCore
 // Self-updating Google button that adapts to Light/Dark without recreation.
 internal final class GoogleSignInButton: UIButton
 {
-    private let styled: Bool
+    private let color: ButtonColor
+    private let adaptive: Bool
     
-    init(styled: Bool) {
-        self.styled = styled
-        super.init(frame: .zero)
-        applyStyle(for: traitCollection.userInterfaceStyle)
-    }
-    
-    required init?(coder: NSCoder) {
-        self.styled = true
-        super.init(coder: coder)
-        applyStyle(for: traitCollection.userInterfaceStyle)
-    }
-    
-    public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+    public init(color: ButtonColor = .black, adaptive: Bool = false)
+    {
+            self.color = color
+            self.adaptive = adaptive
+            super.init(frame: .zero)
             applyStyle(for: traitCollection.userInterfaceStyle)
         }
-    }
     
-    private func applyStyle(for interfaceStyle: UIUserInterfaceStyle) {
-        let isDark = (interfaceStyle == .dark)
+    required init?(coder: NSCoder) {
+            self.color = .black
+            self.adaptive = false
+            super.init(coder: coder)
+            applyStyle(for: traitCollection.userInterfaceStyle)
+        }
         
-        if styled {
+        public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+            super.traitCollectionDidChange(previousTraitCollection)
+            if adaptive, traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+                applyStyle(for: traitCollection.userInterfaceStyle)
+            }
+        }
+        
+        private func applyStyle(for interfaceStyle: UIUserInterfaceStyle) {
+            var effectiveColor = color
+            
+            if adaptive {
+                if interfaceStyle == .dark {
+                    effectiveColor = (color == .black) ? .white : .black
+                }
+            }
+            
+            let background: UIColor = (effectiveColor == .black) ? .black : .white
+            let foreground: UIColor = (effectiveColor == .black) ? .white : .black
+            
             var config = UIButton.Configuration.filled()
-            config.baseBackgroundColor = isDark ? .black : .white
-            config.baseForegroundColor = isDark ? .white : .black
+            config.baseBackgroundColor = background
+            config.baseForegroundColor = foreground
             config.title = "Sign in with Google"
-            if let logo = UIImage(named: "googleLogo")?.withRenderingMode(.alwaysOriginal) {
+            if let logo = UIImage(named: "googleLogo") {
                 config.image = logo
             }
             config.imagePadding = 8
             config.cornerStyle = .medium
+            
             self.configuration = config
             self.contentHorizontalAlignment = .center
             self.clipsToBounds = true
-            self.layer.cornerRadius = 0 // config cornerStyle is used; keep layer neutral
-        } else {
-            // Plain, no-corner-radius variant
-            self.configuration = .plain()
-            self.setTitle("Sign in with Google", for: .normal)
-            if let logo = UIImage(named: "googleLogo")?.withRenderingMode(.alwaysOriginal) {
-                self.setImage(logo, for: .normal)
-            }
-            self.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-            self.backgroundColor = isDark ? .black : .white
-            self.setTitleColor(isDark ? .white : .black, for: .normal)
-            self.contentHorizontalAlignment = .center
-            self.contentEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
-            self.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
-            self.titleEdgeInsets = UIEdgeInsets(top: 0, left: 4, bottom: 0, right: -4)
-            self.clipsToBounds = true
-            self.layer.cornerRadius = 0
         }
-        
-        self.setNeedsLayout()
     }
-}
+
 
