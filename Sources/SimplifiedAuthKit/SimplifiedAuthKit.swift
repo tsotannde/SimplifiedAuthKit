@@ -40,25 +40,45 @@ public final class SimplifiedAuthKit
     }
     
     
-        public static func isSignedIn() -> Bool {
-            return GlobalAuthentification.isSignedIn()
-        }
-        
-        public static func currentUser() -> SimplifiedAuthUser? {
-            return GlobalAuthentification.currentUser()
-        }
+    public static func isSignedIn() -> Bool
+    {
+        return GlobalAuthentification.isSignedIn()
+    }
     
-    public static func signOut() -> Bool {
+    public static func signOut() -> Bool
+    {
         return GlobalAuthentification.signOut()
     }
     
+    public static func currentUser() -> SimplifiedAuthUser?
+    {
+        return GlobalAuthentification.currentUser()
+    }
     
+    public static func currentUserID() -> String?
+    {
+        return GlobalAuthentification.currentUserID()
+    }
     
-    
+    public static func currentUserEmail() -> String?
+    {
+        return GlobalAuthentification.currentUserEmail()
+    }
    
+    public static func currentUserDisplayName() -> String? {
+        return GlobalAuthentification.currentUserDisplayName()
+    }
     
-  
+    public static func currentUserPhotoURL() -> URL?
+    {
+        return GlobalAuthentification.currentUserPhotoURL()
+    }
     
+    @MainActor
+    public static func observeAuthChanges(_ completion: @escaping (User?) -> Void)
+    {
+        GlobalAuthentification.observeAuthChanges(completion)
+    }
    
    
     

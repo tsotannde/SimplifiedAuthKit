@@ -41,7 +41,8 @@ internal class  GlobalAuthentification
     
     /// Signs out the current user.
     /// - Returns: `true` if sign-out succeeds, `false` otherwise.
-    public static func signOut() -> Bool {
+    public static func signOut() -> Bool
+    {
         do {
             try Auth.auth().signOut()
             print("✅ Successfully signed out")
@@ -64,7 +65,8 @@ internal class  GlobalAuthentification
     }
     
     /// Returns the current Firebase user ID, or nil if not signed in.
-    public static func currentUserID() -> String? {
+    public static func currentUserID() -> String?
+    {
         return Auth.auth().currentUser?.uid
     }
     
