@@ -74,8 +74,9 @@ public final class SimplifiedAuthKit
         return GlobalAuthentification.currentUserPhotoURL()
     }
     
+    //REMOVE
     @MainActor
-    public static func observeAuthChanges(_ completion: @escaping (User?) -> Void)
+    public static func observeAuthChanges(_ completion: @escaping(SimplifiedAuthUser?) -> Void)
     {
         GlobalAuthentification.observeAuthChanges(completion)
     }

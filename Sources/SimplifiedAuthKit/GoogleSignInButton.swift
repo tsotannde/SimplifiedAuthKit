@@ -52,9 +52,9 @@ internal final class GoogleSignInButton: UIButton
             if let logo = UIImage(named: "googleLogo") {
                 config.image = logo
             }
-            config.imagePadding = 8
-            config.cornerStyle = .medium
             
+            config.imagePadding = 8
+            //config.cornerStyle = .medium
             self.configuration = config
             self.contentHorizontalAlignment = .center
             self.clipsToBounds = true

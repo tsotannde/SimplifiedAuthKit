@@ -34,34 +34,7 @@ public final class AppleSignInButton: UIButton
             }
         }
         
-//        private func applyStyle(for interfaceStyle: UIUserInterfaceStyle) {
-//            var effectiveColor = color
-//            
-//            if adaptive {
-//                if interfaceStyle == .dark {
-//                    effectiveColor = (color == .black) ? .white : .black
-//                }
-//            }
-//            
-//            let background: UIColor = (effectiveColor == .black) ? .black : .white
-//            let foreground: UIColor = (effectiveColor == .black) ? .white : .black
-//            
-//            var config = UIButton.Configuration.filled()
-//            config.baseBackgroundColor = background
-//            config.baseForegroundColor = foreground
-//            config.title = "Sign in with Apple"
-//            if let logo = UIImage(systemName: "apple.logo") {
-//                config.image = logo
-//            }
-//            config.imagePlacement = .leading
-//            config.imagePadding = 10
-//            config.cornerStyle = .medium
-//            
-//            self.configuration = config
-//            self.contentHorizontalAlignment = .center
-//            self.clipsToBounds = true
-//        }
-    
+
     private func applyStyle(for interfaceStyle: UIUserInterfaceStyle) {
         var effectiveColor = color
         if adaptive, interfaceStyle == .dark {
@@ -89,7 +62,7 @@ public final class AppleSignInButton: UIButton
         self.imageEdgeInsets = UIEdgeInsets(top: 0, left: -6, bottom: 0, right: 0)
         self.titleEdgeInsets = UIEdgeInsets(top: 0, left: 6, bottom: 0, right: -6)
 
-        self.layer.cornerRadius = 6
+        self.layer.cornerRadius = 20
         self.clipsToBounds = true
     }
     }

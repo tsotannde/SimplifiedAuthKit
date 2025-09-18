@@ -86,19 +86,32 @@ internal class  GlobalAuthentification
     }
     
     /// Observes Firebase auth state changes.
+    /// This function automatically manages the listener lifecycle so callers don’t need to handle [weak self].
     /// - Parameter completion: Closure called whenever auth state changes.
     @MainActor
-    public static func observeAuthChanges(_ completion: @escaping (User?) -> Void) {
+    public static func observeAuthChanges(_ completion: @escaping (SimplifiedAuthUser?) -> Void) {
+        // Remove existing listener if one exists
         if let handle = authHandle {
             Auth.auth().removeStateDidChangeListener(handle)
+            authHandle = nil
         }
+
+        // Add new listener
         authHandle = Auth.auth().addStateDidChangeListener { _, user in
             if let user = user {
                 print("🔄 Auth state changed: User signed in (\(user.uid))")
+                completion(
+                    SimplifiedAuthUser(
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName,
+                        photoURL: user.photoURL
+                    )
+                )
             } else {
                 print("🔄 Auth state changed: User signed out")
+                completion(nil)
             }
-            completion(user)
         }
     }
     
