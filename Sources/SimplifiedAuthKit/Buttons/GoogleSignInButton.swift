@@ -49,9 +49,10 @@ internal final class GoogleSignInButton: UIButton
             config.baseBackgroundColor = background
             config.baseForegroundColor = foreground
             config.title = "Sign in with Google"
-            if let logo = UIImage(named: "googleLogo") {
-                config.image = logo
-            }
+            
+            let logo = UIImage(named: "googleLogo", in: .module, with: nil)?.withRenderingMode(.alwaysOriginal)
+            config.image = logo
+        
             
             config.imagePadding = 8
             //config.cornerStyle = .medium
